@@ -1,0 +1,14 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1600" height="900" fill="#E9EDE7"/>
+  <rect x="76" y="76" width="1448" height="748" rx="34" fill="#FAFAF5" stroke="#C6D0C8" stroke-width="4"/>
+  <rect x="124" y="596" width="1360" height="112" rx="26" fill="#D8E1DA"/>
+  <ellipse cx="1034" cy="590" rx="286" ry="58" fill="#B7C7BC"/>
+  <rect x="844" y="226" width="380" height="430" rx="62" fill="#294D3B"/>
+  <rect x="894" y="278" width="280" height="282" rx="42" fill="#F3F5EF"/>
+  <rect x="954" y="376" width="160" height="132" rx="18" fill="#D4B26A"/>
+  <rect x="940" y="588" width="188" height="38" rx="19" fill="#294D3B"/>
+  <path d="M180 230H620" stroke="#D4B26A" stroke-width="18" stroke-linecap="round"/>
+  <path d="M180 292H520" stroke="#91A69A" stroke-width="16" stroke-linecap="round"/>
+  <text x="180" y="462" fill="#294D3B" font-family="Arial, sans-serif" font-size="58" font-weight="700">Banner social concept</text>
+  <text x="180" y="528" fill="#66756C" font-family="Arial, sans-serif" font-size="32">Demo fallback asset</text>
+</svg>

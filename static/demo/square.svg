@@ -1,0 +1,14 @@
+<svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1080" height="1080" fill="#E9EDE7"/>
+  <rect x="92" y="92" width="896" height="896" rx="34" fill="#F9FAF6" stroke="#C5D0C8" stroke-width="4"/>
+  <rect x="184" y="654" width="712" height="156" rx="24" fill="#D8E1DA"/>
+  <ellipse cx="540" cy="654" rx="252" ry="54" fill="#B7C7BC"/>
+  <path d="M399 288C399 251.549 428.549 222 465 222H615C651.451 222 681 251.549 681 288V669C681 715.392 643.392 753 597 753H483C436.608 753 399 715.392 399 669V288Z" fill="#294D3B"/>
+  <path d="M433 319C433 287.52 458.52 262 490 262H590C621.48 262 647 287.52 647 319V620C647 650.928 621.928 676 591 676H489C458.072 676 433 650.928 433 620V319Z" fill="#F3F5EF"/>
+  <rect x="471" y="399" width="138" height="134" rx="16" fill="#D4B26A"/>
+  <rect x="467" y="565" width="146" height="34" rx="17" fill="#294D3B"/>
+  <path d="M212 240H358" stroke="#D4B26A" stroke-width="18" stroke-linecap="round"/>
+  <path d="M722 842H886" stroke="#294D3B" stroke-width="18" stroke-linecap="round"/>
+  <text x="160" y="905" fill="#294D3B" font-family="Arial, sans-serif" font-size="44" font-weight="700">Square social concept</text>
+  <text x="160" y="958" fill="#66756C" font-family="Arial, sans-serif" font-size="28">Demo fallback asset</text>
+</svg>

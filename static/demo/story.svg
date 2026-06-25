@@ -1,0 +1,14 @@
+<svg width="1080" height="1920" viewBox="0 0 1080 1920" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1080" height="1920" fill="#E8ECE8"/>
+  <rect x="90" y="104" width="900" height="1712" rx="36" fill="#FAFAF5" stroke="#C7D1C9" stroke-width="4"/>
+  <path d="M170 286H640" stroke="#D4B26A" stroke-width="20" stroke-linecap="round"/>
+  <path d="M170 350H520" stroke="#91A69A" stroke-width="16" stroke-linecap="round"/>
+  <ellipse cx="540" cy="1284" rx="330" ry="78" fill="#B7C7BC"/>
+  <rect x="318" y="674" width="444" height="680" rx="76" fill="#294D3B"/>
+  <rect x="374" y="754" width="332" height="458" rx="54" fill="#F3F5EF"/>
+  <rect x="434" y="908" width="212" height="210" rx="24" fill="#D4B26A"/>
+  <rect x="418" y="1160" width="244" height="54" rx="27" fill="#294D3B"/>
+  <circle cx="828" cy="486" r="76" fill="#D4B26A" opacity="0.9"/>
+  <text x="156" y="1548" fill="#294D3B" font-family="Arial, sans-serif" font-size="58" font-weight="700">Story social concept</text>
+  <text x="156" y="1620" fill="#66756C" font-family="Arial, sans-serif" font-size="34">Demo fallback asset</text>
+</svg>
