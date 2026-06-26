@@ -107,6 +107,12 @@
         quality and consistency. For even more reliability, the grader could return structured JSON
         with reasons, scores, and suggested prompt edits before the final image is selected.
       </p>
+      <p>
+        I would also revisit the UI itself. The current interface is functional, but I do not like
+        it as much as I would want to: the layout, visual hierarchy, empty states, progress feedback,
+        and final result presentation could all be improved to make the product feel more polished
+        and easier to use.
+      </p>
     </article>
   </div>
 </section>
