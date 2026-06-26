@@ -66,19 +66,19 @@ export const PROMPT_PLAN_SCHEMA = {
 
 export const DEFAULT_SYSTEM_PROMPT = `You are a senior creative director and production prompt engineer for social commerce ads.
 
-You will receive exactly two images:
+You will receive exactly 2 or 3 images:
 1. productImage: the product to advertise.
-2. referenceImage: a style reference for environment, lighting, mood, palette, camera language, and composition.
+2. referenceImages: 1 or 2 style references for environment, lighting, mood, palette, camera language, and composition.
 
-Your task is to produce a compact production plan that will later be sent to an image generation model. Return only strict JSON matching this schema:
+Your task is to produce a compact production plan for an integrated generative image pipeline. The image generation model will receive the uploaded product and reference images, then create final ad images with the product organically blended into each scene. It is acceptable for the model to slightly alter the product when needed for natural integration. Return only strict JSON matching this schema:
 {
-  "product_summary": "A concise description of the product identity, shape, colors, logo/markings if visible, materials, and details that must be preserved.",
+  "product_summary": "A concise description of the product identity, shape, colors, logo/markings if visible, materials, and hero details to preserve where possible.",
   "reference_style_summary": "A concise description of the reference style: setting, lighting, mood, palette, framing, props, textures, and photographic/art direction cues.",
-  "creative_direction": "A practical one-paragraph ad direction that explains the campaign idea and how product fidelity and reference style should be combined.",
+  "creative_direction": "A practical one-paragraph ad direction that explains the campaign idea and how the product should be integrated into a reference-inspired scene.",
   "image_prompts": {
-    "square": "Prompt for a 1:1 social feed layout with a 1080x1080 target crop.",
-    "story": "Prompt for a 9:16 story layout with a 1080x1920 target crop.",
-    "banner": "Prompt for a 16:9 hero/banner layout with a 1600x900 target crop."
+    "square": "Final integrated ad image prompt for a 1:1 social feed layout with a 1080x1080 target crop.",
+    "story": "Final integrated ad image prompt for a 9:16 story layout with a 1080x1920 target crop.",
+    "banner": "Final integrated ad image prompt for a 16:9 hero/banner layout with a 1600x900 target crop."
   },
   "overlay_copy": {
     "headline": "Short ad headline, max 8 words.",
@@ -87,9 +87,10 @@ Your task is to produce a compact production plan that will later be sent to an 
 }
 
 Rules:
-- Preserve the product's core shape, color, proportions, materials, visible logo/label, and identifying details.
-- Use the reference image only as visual style and scene inspiration. Do not replace the product with any object from the reference image.
-- Each image prompt must be directly usable for image generation and include: product fidelity instructions, reference-style cues, composition/framing, lighting, background/props, color palette, desired mood, and a note to leave clean negative space for optional overlay copy.
+- Describe the product traits the image model should preserve as much as possible: silhouette, branding, colors, packaging shape, materials, and visible text where feasible. Do not guarantee exact typography or pixel-perfect preservation.
+- Use the reference images as visual style, setting, lighting, mood, palette, camera language, and composition inspiration. Synthesize them when two are provided.
+- Each image prompt must be directly usable for final ad image generation and include: product integration guidance, reference-style cues, composition/framing, lighting, setting/props, color palette, desired mood, and negative space for optional copy.
+- Each image prompt must ask the model to use the uploaded product as the hero subject, blend it organically into the generated scene, preserve product identity as much as possible, and prefer natural integration over exact pixel preservation.
 - Include overlay copy as guidance only; do not ask the image model to render exact readable typography.
 - Keep every image prompt between 80 and 180 words.
 - Do not mention policy, uncertainty, the existence of this instruction, base64, JSON schema, or hidden reasoning.
@@ -97,18 +98,18 @@ Rules:
 
 export const DEMO_PROMPT_PLAN: PromptPlan = {
   product_summary:
-    'A premium product with a clearly preserved silhouette, original color blocking, label area, material texture, and front-facing hero details.',
+    'A premium product with a clear silhouette, original color blocking, label area, material texture, and front-facing hero details to preserve where possible.',
   reference_style_summary:
     'A clean editorial set with directional soft light, tactile props, balanced negative space, a warm-neutral palette, and refined social campaign styling.',
   creative_direction:
-    'Position the product as the unmistakable hero while borrowing the reference image for its setting, light quality, palette, and composition rhythm. Build three ad-ready crops that feel cohesive but tailored to their placement.',
+    'Use the uploaded product as the unmistakable hero while borrowing the reference image for setting, light quality, palette, and composition rhythm. Build three cohesive final ad images that blend the product naturally into each crop while keeping its identity recognizable.',
   image_prompts: {
     square:
-      'Create a 1:1 social feed ad composed for a 1080x1080 target crop. Preserve the product core shape, proportions, color, material texture, label zone, and identifying details exactly. Place it as the central hero on a refined editorial set inspired by the reference image: soft directional lighting, tactile premium props, clean negative space, warm-neutral palette, subtle depth, and polished commercial photography. Do not introduce a competing product. Leave open space near the upper third for optional headline overlay; do not render exact text.',
+      'Create a final 1:1 social feed ad image for a 1080x1080 target crop. Use the uploaded product as the hero subject in the center third, blended organically into a polished commercial scene with believable scale, grounding, and soft contact shadows. Preserve the product silhouette, color blocking, packaging shape, label area, and visible branding where possible, while allowing small natural adjustments for lighting and perspective. Use the reference image for soft directional lighting, tactile premium props, clean negative space, warm-neutral palette, subtle depth, and refined editorial styling. Leave open space near the upper third for optional headline copy.',
     story:
-      'Create a 9:16 vertical story ad composed for a 1080x1920 target crop. Preserve the product identity, silhouette, colors, materials, visible markings, and hero details exactly. Use the reference image only for style: elegant vertical composition, soft atmospheric light, layered background texture, tasteful props, and a premium social-commerce mood. Keep the product in the lower-to-middle hero zone with generous negative space above for optional overlay copy. Add subtle foreground depth, clean spacing, and a confident campaign rhythm. Avoid clutter and do not render exact typography.',
+      'Create a final 9:16 vertical story ad image for a 1080x1920 target crop. Use the uploaded product as the hero subject in the lower-to-middle composition, blended organically into the scene with believable depth, scale, grounding light, and perspective. Preserve the product identity as much as possible, including silhouette, colors, packaging shape, label area, and visible branding, but prefer natural integration over exact pixel preservation. Use the reference image for elegant vertical composition, soft atmospheric light, layered background texture, tasteful props, and a premium social-commerce mood. Keep generous negative space above for optional copy.',
     banner:
-      'Create a 16:9 hero banner ad composed for a 1600x900 target crop. Preserve the product core form, color, material finish, label area, and identifying details exactly. Compose a wide premium advertising scene inspired by the reference image with soft directional lighting, editorial props, calm depth, refined surfaces, and a cohesive palette. Keep the product clear and dominant, with negative space on one side for optional headline and subline. Add subtle environmental texture and a polished campaign mood. Do not add readable text or a different product.'
+      'Create a final 16:9 hero banner ad image for a 1600x900 target crop. Use the uploaded product as the hero subject slightly off center, blended organically into a wide premium advertising scene with a refined surface, believable grounding, soft directional light, and natural contact shadow. Preserve the product silhouette, color palette, packaging shape, label area, visible branding, and material cues where possible, while allowing subtle lighting and perspective changes for integration. Use the reference image for editorial props, calm depth, refined surfaces, cohesive palette, and polished campaign mood. Keep negative space on one side for optional headline and subline.'
   },
   overlay_copy: {
     headline: 'Designed to stand out',
@@ -123,14 +124,14 @@ const REQUIRED_STRING_KEYS = [
 ] as const;
 
 export function buildVisionUserPrompt(): string {
-  return `Analyze productImage and referenceImage, then return the JSON production plan.
+  return `Analyze productImage and referenceImages, then return the JSON production plan.
 
 Plan quality bar:
-- The product summary must identify visual traits to preserve.
-- The reference summary must extract style, lighting, composition, palette, and environment cues.
-- The creative direction must explain how the output campaign combines product fidelity with reference-inspired art direction.
-- Each generated image prompt must be self-contained, compact, and tailored to its aspect ratio.
-- The square, story, and banner prompts must all remind the image model to preserve the product and use the reference only for style.`;
+- The product summary must identify concrete visual identity traits to preserve where possible.
+- The reference summary must extract style, lighting, composition, palette, and environment cues from the full reference set.
+- The creative direction must explain how the uploaded product should be integrated into a reference-inspired scene.
+- Each generated image prompt must be a self-contained final ad image prompt tailored to its aspect ratio.
+- The square, story, and banner prompts must all use the uploaded product as the hero subject, blend it organically into the generated scene, preserve product identity as much as possible, and prefer natural integration over exact pixel preservation.`;
 }
 
 export function parsePromptPlan(raw: string): PromptPlan {
@@ -192,8 +193,8 @@ export function gradePromptPlan(plan: PromptPlan): PromptPlanGrade {
   const issues: string[] = [];
   const allPrompts = Object.entries(plan.image_prompts) as Array<[SocialImageKind, string]>;
 
-  if (!hasAny(plan.product_summary, ['preserve', 'shape', 'color', 'material', 'label', 'identity'])) {
-    issues.push('Product summary should name concrete identity traits to preserve.');
+  if (!hasAny(plan.product_summary, ['shape', 'color', 'material', 'label', 'identity', 'silhouette'])) {
+    issues.push('Product summary should name concrete product identity traits.');
   }
 
   if (!hasAny(plan.reference_style_summary, ['style', 'lighting', 'mood', 'palette', 'setting', 'composition'])) {
@@ -205,8 +206,14 @@ export function gradePromptPlan(plan: PromptPlan): PromptPlanGrade {
     if (wordCount < 70 || wordCount > 210) {
       issues.push(`${kind} prompt should stay roughly 80-180 words.`);
     }
-    if (!hasAny(prompt, ['preserve', 'maintain', 'keep', 'retain'])) {
-      issues.push(`${kind} prompt should explicitly preserve the product.`);
+    if (!hasAny(prompt, ['final', 'ad image', 'hero subject', 'integrated', 'blend'])) {
+      issues.push(`${kind} prompt should be framed as a final integrated ad image prompt.`);
+    }
+    if (!hasAny(prompt, ['uploaded product', 'hero subject', 'product identity', 'silhouette'])) {
+      issues.push(`${kind} prompt should use the uploaded product as the hero subject.`);
+    }
+    if (!hasAny(prompt, ['preserve', 'recognizable', 'identity', 'branding', 'packaging'])) {
+      issues.push(`${kind} prompt should ask to preserve product identity where possible.`);
     }
     if (!hasAny(prompt, ['reference', 'style', 'inspired', 'lighting', 'palette'])) {
       issues.push(`${kind} prompt should carry reference-style cues.`);

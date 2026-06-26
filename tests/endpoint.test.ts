@@ -11,10 +11,10 @@ function buildRequest(formData: FormData) {
 }
 
 describe('/api/generate', () => {
-  it('accepts productImage and referenceImage uploads and returns demo fallback without an API key', async () => {
+  it('accepts productImage and referenceImages uploads and returns demo fallback without an API key', async () => {
     const formData = new FormData();
     formData.set('productImage', new File([pngBytes], 'product.png', { type: 'image/png' }));
-    formData.set('referenceImage', new File([pngBytes], 'reference.png', { type: 'image/png' }));
+    formData.append('referenceImages', new File([pngBytes], 'reference.png', { type: 'image/png' }));
 
     const response = await POST({
       request: buildRequest(formData),
@@ -31,7 +31,7 @@ describe('/api/generate', () => {
 
   it('returns validation errors for missing productImage', async () => {
     const formData = new FormData();
-    formData.set('referenceImage', new File([pngBytes], 'reference.png', { type: 'image/png' }));
+    formData.append('referenceImages', new File([pngBytes], 'reference.png', { type: 'image/png' }));
 
     const response = await POST({
       request: buildRequest(formData),
@@ -41,5 +41,22 @@ describe('/api/generate', () => {
 
     expect(response.status).toBe(400);
     expect(payload.error).toContain('productImage');
+  });
+
+  it('rejects requests with more than two reference images', async () => {
+    const formData = new FormData();
+    formData.set('productImage', new File([pngBytes], 'product.png', { type: 'image/png' }));
+    formData.append('referenceImages', new File([pngBytes], 'reference-1.png', { type: 'image/png' }));
+    formData.append('referenceImages', new File([pngBytes], 'reference-2.png', { type: 'image/png' }));
+    formData.append('referenceImages', new File([pngBytes], 'reference-3.png', { type: 'image/png' }));
+
+    const response = await POST({
+      request: buildRequest(formData),
+      fetch
+    } as Parameters<typeof POST>[0]);
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload.error).toContain('referenceImages');
   });
 });

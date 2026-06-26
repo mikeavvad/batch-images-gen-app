@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node scripts/run.mjs dev",
-    "build": "node scripts/run.mjs build",
+    "dev": "vite dev",
+    "build": "vite build",
     "preview": "node scripts/run.mjs preview",
     "check": "node scripts/run.mjs check",
     "test": "node scripts/run.mjs test"

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SYSTEM_PROMPT } from '../src/lib/prompt';
 import {
   RequestValidationError,
   fileToDataUrl,
   validateGenerateFormData,
-  validateImageField
+  validateImageField,
+  validateReferenceImages
 } from '../src/lib/server/validation';
 
 const pngBytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -14,16 +14,19 @@ function imageFile(name = 'image.png') {
 }
 
 describe('upload validation', () => {
-  it('accepts productImage and referenceImage fields', () => {
+  it('accepts productImage and 1-2 referenceImages fields', () => {
     const formData = new FormData();
     formData.set('productImage', imageFile('product.png'));
-    formData.set('referenceImage', imageFile('reference.png'));
+    formData.append('referenceImages', imageFile('reference-1.png'));
+    formData.append('referenceImages', imageFile('reference-2.png'));
 
     const validated = validateGenerateFormData(formData);
 
     expect(validated.productImage.name).toBe('product.png');
-    expect(validated.referenceImage.name).toBe('reference.png');
-    expect(validated.systemPrompt).toBe(DEFAULT_SYSTEM_PROMPT);
+    expect(validated.referenceImages.map((file) => file.name)).toEqual([
+      'reference-1.png',
+      'reference-2.png'
+    ]);
   });
 
   it('rejects missing required image fields', () => {
@@ -34,6 +37,13 @@ describe('upload validation', () => {
     const file = new File(['plain text'], 'notes.txt', { type: 'text/plain' });
 
     expect(() => validateImageField(file, 'productImage')).toThrow(/PNG, JPEG, or WebP/);
+  });
+
+  it('rejects reference image collections outside the 1-2 range', () => {
+    expect(() => validateReferenceImages([])).toThrow(/exactly 1 or 2 images/);
+    expect(() =>
+      validateReferenceImages([imageFile('one.png'), imageFile('two.png'), imageFile('three.png')])
+    ).toThrow(/exactly 1 or 2 images/);
   });
 
   it('converts files to data URLs', async () => {

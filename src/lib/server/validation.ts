@@ -1,13 +1,11 @@
-import { DEFAULT_SYSTEM_PROMPT } from '$lib/prompt';
+import { Buffer } from 'node:buffer';
 
 export const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-export const MAX_SYSTEM_PROMPT_CHARS = 7000;
 
 export interface ValidatedGenerateInput {
   productImage: File;
-  referenceImage: File;
-  systemPrompt: string;
+  referenceImages: File[];
 }
 
 export class RequestValidationError extends Error {
@@ -21,14 +19,20 @@ export class RequestValidationError extends Error {
 
 export function validateGenerateFormData(formData: FormData): ValidatedGenerateInput {
   const productImage = validateImageField(formData.get('productImage'), 'productImage');
-  const referenceImage = validateImageField(formData.get('referenceImage'), 'referenceImage');
-  const systemPrompt = validateSystemPrompt(formData.get('systemPrompt'));
+  const referenceImages = validateReferenceImages(formData.getAll('referenceImages'));
 
   return {
     productImage,
-    referenceImage,
-    systemPrompt
+    referenceImages
   };
+}
+
+export function validateReferenceImages(values: FormDataEntryValue[]): File[] {
+  if (values.length < 1 || values.length > 2) {
+    throw new RequestValidationError('referenceImages must include exactly 1 or 2 images.');
+  }
+
+  return values.map((value, index) => validateImageField(value, `referenceImages[${index}]`));
 }
 
 export function validateImageField(value: FormDataEntryValue | null, fieldName: string): File {
@@ -49,25 +53,6 @@ export function validateImageField(value: FormDataEntryValue | null, fieldName: 
   }
 
   return value;
-}
-
-export function validateSystemPrompt(value: FormDataEntryValue | null): string {
-  if (value === null || value instanceof File) {
-    return DEFAULT_SYSTEM_PROMPT;
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return DEFAULT_SYSTEM_PROMPT;
-  }
-
-  if (trimmed.length > MAX_SYSTEM_PROMPT_CHARS) {
-    throw new RequestValidationError(
-      `systemPrompt must be ${MAX_SYSTEM_PROMPT_CHARS} characters or fewer.`
-    );
-  }
-
-  return trimmed;
 }
 
 export async function fileToDataUrl(file: File): Promise<string> {
