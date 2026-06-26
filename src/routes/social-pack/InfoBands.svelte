@@ -90,6 +90,24 @@
         <strong>5 minute</strong> sessions for fixes.
       </p>
     </article>
+
+    <article>
+      <h3>What could be improved</h3>
+      <p>
+        The biggest improvement would be to move the generation flow to a fully asynchronous
+        pipeline. Instead of keeping the user inside a long request, the app could create a job,
+        stream status updates over WebSocket or server-sent events, and show partial progress as
+        each product is processed. That would make the UI feel more responsive, support retries per
+        image, and allow the user to safely leave and return to an in-progress job.
+      </p>
+      <p>
+        The grader could also be made stronger and more stable. A dedicated system prompt with a
+        clear rubric, examples of strong and weak outputs, stricter scoring criteria, and explicit
+        checks for brand fit, composition, text safety, and visual clarity would likely improve both
+        quality and consistency. For even more reliability, the grader could return structured JSON
+        with reasons, scores, and suggested prompt edits before the final image is selected.
+      </p>
+    </article>
   </div>
 </section>
 
