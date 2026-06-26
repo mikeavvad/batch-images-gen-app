@@ -22,16 +22,30 @@ export interface GenerateResponse {
   warnings?: string[];
 }
 
+export interface GeneratedPostResult {
+  index: number;
+  productName: string;
+  result: GenerateResponse;
+  image: GeneratedImage;
+}
+
+export interface ProductGenerationError {
+  index: number;
+  productName: string;
+  error: string;
+}
+
 export interface SocialPackPageState {
-  productFile: File | null;
+  productFiles: File[];
   referenceFiles: [File | null, File | null];
-  productPreview: string;
+  productPreviews: string[];
   referencePreviews: [string, string];
-  selectedKind: SocialImageKind;
-  result: GenerateResponse | null;
+  results: GeneratedPostResult[];
+  productErrors: ProductGenerationError[];
   errorMessage: string;
   clientWarning: string;
   isGenerating: boolean;
+  generationStatus: string;
 }
 
 export type UploadField = 'product' | 'reference';

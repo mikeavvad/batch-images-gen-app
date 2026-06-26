@@ -1,7 +1,12 @@
-import type { SocialImageKind } from '$lib/prompt';
-import type { GenerateResponse, SocialPackPageState, UploadField } from './types';
+import type {
+  GeneratedPostResult,
+  ProductGenerationError,
+  SocialPackPageState,
+  UploadField
+} from './types';
 
 export const MAX_CLIENT_WARN_BYTES = 6 * 1024 * 1024;
+export const MAX_PRODUCT_FILES = 2;
 
 export interface ApplyUploadSelectionResult {
   nextState: SocialPackPageState;
@@ -10,15 +15,16 @@ export interface ApplyUploadSelectionResult {
 
 export function createPageState(): SocialPackPageState {
   return {
-    productFile: null,
+    productFiles: [],
     referenceFiles: [null, null],
-    productPreview: '',
+    productPreviews: [],
     referencePreviews: ['', ''],
-    selectedKind: 'square',
-    result: null,
+    results: [],
+    productErrors: [],
     errorMessage: '',
     clientWarning: '',
-    isGenerating: false
+    isGenerating: false,
+    generationStatus: ''
   };
 }
 
@@ -29,10 +35,12 @@ export function revokePreview(preview: string, revokeObjectUrl: (preview: string
 }
 
 export function revokePagePreviews(
-  state: Pick<SocialPackPageState, 'productPreview' | 'referencePreviews'>,
+  state: Pick<SocialPackPageState, 'productPreviews' | 'referencePreviews'>,
   revokeObjectUrl: (preview: string) => void = URL.revokeObjectURL
 ) {
-  revokePreview(state.productPreview, revokeObjectUrl);
+  for (const preview of state.productPreviews) {
+    revokePreview(preview, revokeObjectUrl);
+  }
   for (const preview of state.referencePreviews) {
     revokePreview(preview, revokeObjectUrl);
   }
@@ -41,51 +49,67 @@ export function revokePagePreviews(
 export function applyUploadSelection(
   state: SocialPackPageState,
   field: UploadField,
-  file: File | null,
+  fileOrFiles: File | File[] | null,
   createObjectUrl: (file: File) => string = URL.createObjectURL,
   revokeObjectUrl: (preview: string) => void = URL.revokeObjectURL
 ): ApplyUploadSelectionResult {
   if (field === 'reference') {
-    return applyReferenceUploadSelection(state, file ? [file] : [], createObjectUrl, revokeObjectUrl);
+    return applyReferenceUploadSelection(
+      state,
+      Array.isArray(fileOrFiles) ? fileOrFiles : fileOrFiles ? [fileOrFiles] : [],
+      createObjectUrl,
+      revokeObjectUrl
+    );
   }
 
+  const files = Array.isArray(fileOrFiles) ? fileOrFiles : fileOrFiles ? [fileOrFiles] : [];
   const clearedState = {
     ...state,
     errorMessage: '',
     clientWarning: ''
   };
 
-  if (!file) {
+  if (files.length === 0) {
     return {
-      nextState: assignFile(clearedState, field, null, '', revokeObjectUrl),
+      nextState: assignProductFiles(clearedState, [], [], revokeObjectUrl),
       resetInputValue: false
     };
   }
 
-  if (!file.type.startsWith('image/')) {
+  if (files.length > MAX_PRODUCT_FILES) {
     return {
       nextState: {
-        ...assignFile(clearedState, field, null, '', revokeObjectUrl),
-        errorMessage: 'Please choose an image file.'
+        ...clearedState,
+        errorMessage: `Choose up to ${MAX_PRODUCT_FILES} product images.`
       },
       resetInputValue: true
     };
   }
 
+  if (files.some((file) => !file.type.startsWith('image/'))) {
+    return {
+      nextState: {
+        ...assignProductFiles(clearedState, [], [], revokeObjectUrl),
+        errorMessage: 'Please choose image files only.'
+      },
+      resetInputValue: true
+    };
+  }
+
+  const productPreviews = files.map((file) => createObjectUrl(file));
   const clientWarning =
-    file.size > MAX_CLIENT_WARN_BYTES
+    files.some((file) => file.size > MAX_CLIENT_WARN_BYTES)
       ? 'Large uploads may be slower. The server accepts images up to 8 MB each.'
       : '';
 
   return {
-    nextState: assignFile(
+    nextState: assignProductFiles(
       {
         ...clearedState,
         clientWarning
       },
-      field,
-      file,
-      createObjectUrl(file),
+      files,
+      productPreviews,
       revokeObjectUrl
     ),
     resetInputValue: false
@@ -148,11 +172,18 @@ export function applyReferenceUploadSelection(
 }
 
 export async function requestGeneration(
-  state: Pick<SocialPackPageState, 'productFile' | 'referenceFiles'>,
-  fetcher: typeof fetch = fetch
-): Promise<{ result: GenerateResponse; selectedKind: SocialImageKind }> {
-  if (!state.productFile) {
-    throw new Error('Add a product image first.');
+  state: Pick<SocialPackPageState, 'productFiles' | 'referenceFiles'>,
+  fetcher: typeof fetch = fetch,
+  onStatus?: (status: string) => void,
+  onPost?: (post: GeneratedPostResult) => void,
+  onProductError?: (error: ProductGenerationError) => void
+): Promise<{ results: GeneratedPostResult[]; productErrors: ProductGenerationError[] }> {
+  if (state.productFiles.length < 1) {
+    throw new Error('Add at least one product image first.');
+  }
+
+  if (state.productFiles.length > MAX_PRODUCT_FILES) {
+    throw new Error(`Add no more than ${MAX_PRODUCT_FILES} product images.`);
   }
 
   const referenceFiles = state.referenceFiles.filter((file): file is File => file !== null);
@@ -161,7 +192,9 @@ export async function requestGeneration(
   }
 
   const formData = new FormData();
-  formData.set('productImage', state.productFile);
+  for (const file of state.productFiles) {
+    formData.append('productImages', file);
+  }
   for (const file of referenceFiles) {
     formData.append('referenceImages', file);
   }
@@ -170,42 +203,147 @@ export async function requestGeneration(
     method: 'POST',
     body: formData
   });
-  const payload = (await response.json()) as GenerateResponse & { error?: string };
 
-  if (!response.ok) {
-    throw new Error(payload.error ?? 'Generation failed.');
-  }
-
-  return {
-    result: payload,
-    selectedKind: payload.images[0]?.kind ?? 'square'
-  };
+  return readGenerateResponseStream(response, onStatus, onPost, onProductError);
 }
 
-function assignFile(
-  state: SocialPackPageState,
-  field: UploadField,
-  file: File | null,
-  preview: string,
-  revokeObjectUrl: (preview: string) => void
-): SocialPackPageState {
-  if (field === 'product') {
-    revokePreview(state.productPreview, revokeObjectUrl);
-    return {
-      ...state,
-      productFile: file,
-      productPreview: preview
-    };
+async function readGenerateResponseStream(
+  response: Response,
+  onStatus?: (status: string) => void,
+  onPost?: (post: GeneratedPostResult) => void,
+  onProductError?: (error: ProductGenerationError) => void
+): Promise<{ results: GeneratedPostResult[]; productErrors: ProductGenerationError[] }> {
+  if (!response.body) {
+    throw new Error('Generation failed.');
   }
 
-  for (const existingPreview of state.referencePreviews) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  const results: GeneratedPostResult[] = [];
+  const productErrors: ProductGenerationError[] = [];
+  let errorMessage = '';
+  let doneReceived = false;
+
+  const consumeBlock = (block: string) => {
+    let event = '';
+    const dataLines: string[] = [];
+
+    for (const rawLine of block.split('\n')) {
+      const line = rawLine.replace(/\r$/, '');
+      if (line.startsWith('event:')) {
+        event = line.slice('event:'.length).trim();
+      } else if (line.startsWith('data:')) {
+        dataLines.push(line.slice('data:'.length).trimStart());
+      }
+    }
+
+    if (!event || dataLines.length === 0) {
+      return;
+    }
+
+    const data = JSON.parse(dataLines.join('\n')) as unknown;
+
+    if (event === 'status' && typeof data === 'string') {
+      onStatus?.(statusToLoadingText(data));
+      return;
+    }
+
+    if (event === 'post') {
+      const post = data as GeneratedPostResult;
+      results.push(post);
+      onPost?.(post);
+      return;
+    }
+
+    if (event === 'product-error') {
+      const productError = data as ProductGenerationError;
+      productErrors.push(productError);
+      onProductError?.(productError);
+      return;
+    }
+
+    if (event === 'done') {
+      doneReceived = true;
+      return;
+    }
+
+    if (event === 'error') {
+      const payload = data as { error?: string };
+      errorMessage = payload.error ?? 'Generation failed.';
+    }
+  };
+
+  while (true) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+
+    let boundary = findStreamEventBoundary(buffer);
+    while (boundary) {
+      consumeBlock(buffer.slice(0, boundary.index));
+      buffer = buffer.slice(boundary.index + boundary.length);
+      boundary = findStreamEventBoundary(buffer);
+    }
+
+    if (done) {
+      break;
+    }
+  }
+
+  if (errorMessage) {
+    throw new Error(errorMessage);
+  }
+
+  if (buffer.trim()) {
+    throw new Error('Generation stream ended before completion.');
+  }
+
+  if (!doneReceived) {
+    throw new Error('Generation stream ended before completion.');
+  }
+
+  return { results, productErrors };
+}
+
+function findStreamEventBoundary(buffer: string) {
+  const match = /\r?\n\r?\n/.exec(buffer);
+  return match ? { index: match.index, length: match[0].length } : null;
+}
+
+function statusToLoadingText(status: string) {
+  const productMatch = status.match(/^generating-product-(\d+)-of-(\d+)$/);
+  if (productMatch) {
+    return `Generating product ${productMatch[1]} of ${productMatch[2]}.`;
+  }
+
+  switch (status) {
+    case 'accepted':
+      return 'Upload accepted.';
+    case 'validating':
+      return 'Checking images.';
+    case 'generating':
+      return 'Generating posts.';
+    case 'finalizing':
+      return 'Finalizing posts.';
+    default:
+      return 'Generating posts.';
+  }
+}
+
+function assignProductFiles(
+  state: SocialPackPageState,
+  files: File[],
+  previews: string[],
+  revokeObjectUrl: (preview: string) => void
+): SocialPackPageState {
+  for (const existingPreview of state.productPreviews) {
     revokePreview(existingPreview, revokeObjectUrl);
   }
 
   return {
     ...state,
-    referenceFiles: [file, null],
-    referencePreviews: [preview, '']
+    productFiles: files,
+    productPreviews: previews
   };
 }
 

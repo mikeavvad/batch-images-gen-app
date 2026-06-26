@@ -15,6 +15,7 @@ export interface GenerateSocialPostPackInput {
   apiKey?: string;
   promptModel?: string;
   generationModel?: string;
+  mockImageGeneration?: boolean;
   /** @deprecated Use generationModel. Kept for existing deployments. */
   imageModel?: string;
   productImageDataUrl: string;

@@ -3,11 +3,12 @@
   import UploadField from './UploadField.svelte';
   import type { UploadField as UploadFieldName } from './types';
 
-  export let productPreview = '';
+  export let productPreviews: string[] = [];
   export let referencePreviews: [string, string] = ['', ''];
   export let clientWarning = '';
   export let errorMessage = '';
   export let isGenerating = false;
+  export let generationStatus = '';
 
   const dispatch = createEventDispatcher<{
     filechange: { event: Event; field: UploadFieldName };
@@ -21,17 +22,19 @@
 
 <form class="input-panel" on:submit|preventDefault={() => dispatch('generate')}>
   <div class="panel-heading">
-    <h2>The Product</h2>
-    <p>Upload the product hero and 1-2 references for the generated ad scene.</p>
+    <h2>Product Images</h2>
+    <p>Upload product shots and 1-2 references for one square social post per product.</p>
   </div>
 
   <div class="upload-grid">
     <UploadField
       field="product"
-      label="Product image"
-      placeholder="Upload product hero"
+      inputName="productImages"
+      label="Product images"
+      placeholder="Upload product shots"
       alt="Product preview"
-      preview={productPreview}
+      previews={productPreviews}
+      multiple
       on:change={(event) => handleFileChange(event, 'product')}
     />
 
@@ -55,7 +58,11 @@
     <p class="error">{errorMessage}</p>
   {/if}
 
+  {#if isGenerating && generationStatus}
+    <p class="generation-status" aria-live="polite">{generationStatus}</p>
+  {/if}
+
   <button class="primary-button" type="submit" disabled={isGenerating}>
-    {isGenerating ? 'Generating pack...' : 'Generate social pack'}
+    {isGenerating ? generationStatus || 'Generating social posts...' : 'Generate social posts'}
   </button>
 </form>

@@ -2,9 +2,10 @@ import { Buffer } from 'node:buffer';
 
 export const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+export const MAX_PRODUCT_IMAGES = 10;
 
 export interface ValidatedGenerateInput {
-  productImage: File;
+  productImages: File[];
   referenceImages: File[];
 }
 
@@ -18,13 +19,25 @@ export class RequestValidationError extends Error {
 }
 
 export function validateGenerateFormData(formData: FormData): ValidatedGenerateInput {
-  const productImage = validateImageField(formData.get('productImage'), 'productImage');
+  const productImages = validateProductImages(formData.getAll('productImages'));
   const referenceImages = validateReferenceImages(formData.getAll('referenceImages'));
 
   return {
-    productImage,
+    productImages,
     referenceImages
   };
+}
+
+export function validateProductImages(values: FormDataEntryValue[]): File[] {
+  if (values.length < 1) {
+    throw new RequestValidationError('productImages must include at least 1 image.');
+  }
+
+  if (values.length > MAX_PRODUCT_IMAGES) {
+    throw new RequestValidationError(`productImages must include ${MAX_PRODUCT_IMAGES} images or fewer.`);
+  }
+
+  return values.map((value, index) => validateImageField(value, `productImages[${index}]`));
 }
 
 export function validateReferenceImages(values: FormDataEntryValue[]): File[] {

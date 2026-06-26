@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEMO_PROMPT_PLAN } from '../src/lib/prompt';
 import type { GenerateResponse } from '../src/routes/social-pack/types';
-import { getSelectedImage, getStatusLabel, labelFor } from '../src/routes/social-pack/helpers';
+import { getSocialPostImage, getStatusLabel, labelFor } from '../src/routes/social-pack/helpers';
 
 const resultFixture: GenerateResponse = {
   mode: 'generated',
@@ -18,31 +18,61 @@ const resultFixture: GenerateResponse = {
       aspect: '1:1',
       targetWidth: 1080,
       targetHeight: 1080
-    },
-    {
-      kind: 'story',
-      url: '/story.png',
-      fileExtension: 'png',
-      aspect: '9:16',
-      targetWidth: 1080,
-      targetHeight: 1920
     }
   ]
 };
+const squareImage = resultFixture.images[0]!;
 
 describe('page helpers', () => {
-  it('returns the selected image when the variant exists', () => {
-    expect(getSelectedImage(resultFixture, 'story')?.url).toBe('/story.png');
+  it('returns the square image as the single social post when available', () => {
+    expect(getSocialPostImage(resultFixture)?.url).toBe('/square.png');
   });
 
-  it('falls back to the first image when the selected variant is missing', () => {
-    expect(getSelectedImage(resultFixture, 'banner')?.url).toBe('/square.png');
+  it('returns undefined when no generated images are available', () => {
+    expect(
+      getSocialPostImage({
+        ...resultFixture,
+        images: []
+      })
+    ).toBeUndefined();
   });
 
-  it('maps status modes to the current pill labels', () => {
-    expect(getStatusLabel('generated')).toBe('Generated');
-    expect(getStatusLabel('fallback')).toBe('Demo fallback');
-    expect(getStatusLabel(undefined)).toBe('Ready');
+  it('maps batch state to the current pill labels', () => {
+    expect(getStatusLabel()).toBe('Ready');
+    expect(getStatusLabel({ isGenerating: true, results: [], productErrors: [] })).toBe(
+      'Generating'
+    );
+    expect(
+      getStatusLabel({
+        results: [{ index: 0, productName: 'One', result: resultFixture, image: squareImage }],
+        productErrors: []
+      })
+    ).toBe('Complete');
+    expect(
+      getStatusLabel({
+        results: [
+          {
+            index: 0,
+            productName: 'One',
+            result: { ...resultFixture, mode: 'fallback' },
+            image: squareImage
+          }
+        ],
+        productErrors: []
+      })
+    ).toBe('Demo fallback');
+    expect(
+      getStatusLabel({
+        results: [{ index: 0, productName: 'One', result: resultFixture, image: squareImage }],
+        productErrors: [{ index: 1, productName: 'Two', error: 'Failed' }]
+      })
+    ).toBe('Partial');
+    expect(
+      getStatusLabel({
+        results: [],
+        productErrors: [{ index: 0, productName: 'One', error: 'Failed' }]
+      })
+    ).toBe('Failed');
   });
 
   it('uses configured variant labels', () => {
