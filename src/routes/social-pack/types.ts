@@ -35,6 +35,18 @@ export interface ProductGenerationError {
   error: string;
 }
 
+export type ProductProgressStatus = 'queued' | 'generating' | 'done' | 'error';
+
+export interface ProductProgressItem {
+  index: number;
+  name: string;
+  preview: string;
+  status: ProductProgressStatus;
+  progress: number;
+  message: string;
+  error?: string;
+}
+
 export interface SocialPackPageState {
   productFiles: File[];
   referenceFiles: [File | null, File | null];

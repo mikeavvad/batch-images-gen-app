@@ -14,6 +14,26 @@ const referenceImageDataUrls = [
 ];
 const generatedImageDataUrl = 'data:image/png;base64,aW1hZ2U=';
 
+function promptPlanResponse() {
+  return new Response(
+    JSON.stringify({
+      output_text: JSON.stringify(DEMO_PROMPT_PLAN)
+    })
+  );
+}
+
+function imageResponse() {
+  return new Response(
+    JSON.stringify({
+      data: [{ b64_json: generatedImageDataUrl.split(',')[1] }]
+    })
+  );
+}
+
+function providerErrorResponse(status = 503, message = 'busy') {
+  return new Response(JSON.stringify({ error: { message } }), { status });
+}
+
 afterEach(() => {
   vi.useRealTimers();
 });
@@ -95,11 +115,7 @@ describe('OpenAI provider request bodies', () => {
     const fetchImpl = async (_url: RequestInfo | URL, init?: RequestInit) => {
       requestBodies.push(init?.body);
 
-      return new Response(
-        JSON.stringify({
-          data: [{ b64_json: generatedImageDataUrl.split(',')[1] }]
-        })
-      );
+      return requestBodies.length === 1 ? promptPlanResponse() : imageResponse();
     };
 
     const result = await generateSocialPostPack({
@@ -112,9 +128,10 @@ describe('OpenAI provider request bodies', () => {
     });
 
     expect(result.mode).toBe('generated');
-    expect(requestBodies).toHaveLength(1);
-    expect(requestBodies[0]).toBeInstanceOf(FormData);
-    expect((requestBodies[0] as FormData).get('model')).toBe('gpt-image-2');
+    expect(requestBodies).toHaveLength(2);
+    expect(requestBodies[0]).toEqual(expect.any(String));
+    expect(requestBodies[1]).toBeInstanceOf(FormData);
+    expect((requestBodies[1] as FormData).get('model')).toBe('gpt-image-2');
     expect(result.images[0]).toMatchObject({
       kind: 'square',
       aspect: '1:1',
@@ -129,7 +146,7 @@ describe('OpenAI provider request bodies', () => {
     );
   });
 
-  it('generates the square image while the provider prompt plan call is disabled', async () => {
+  it('generates the square image after the provider prompt plan call', async () => {
     const requestBodies: Array<BodyInit | null | undefined> = [];
     const result = await generateSocialPostPack({
       apiKey: 'test-key',
@@ -140,23 +157,24 @@ describe('OpenAI provider request bodies', () => {
       fetchImpl: (async (_url, init) => {
         requestBodies.push(init?.body);
 
-        return new Response(
-          JSON.stringify({
-            data: [{ b64_json: generatedImageDataUrl.split(',')[1] }]
-          })
-        );
+        return requestBodies.length === 1 ? promptPlanResponse() : imageResponse();
       }) as typeof fetch
     });
 
-    expect(requestBodies).toHaveLength(1);
-    expect(requestBodies[0]).toBeInstanceOf(FormData);
+    expect(requestBodies).toHaveLength(2);
+    expect(requestBodies[0]).toEqual(expect.any(String));
+    expect(requestBodies[1]).toBeInstanceOf(FormData);
     expect(result.images).toHaveLength(1);
     expect(result.images[0]?.kind).toBe('square');
   });
 
   it('keeps prompt generation but skips the Images API when image generation is mocked', async () => {
     vi.useFakeTimers();
-    const fetchImpl = vi.fn<typeof fetch>();
+    const requestBodies: Array<BodyInit | null | undefined> = [];
+    const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
+      requestBodies.push(init?.body);
+      return promptPlanResponse();
+    });
 
     const resultPromise = generateSocialPostPack({
       apiKey: 'test-key',
@@ -185,7 +203,9 @@ describe('OpenAI provider request bodies', () => {
     expect(result.warnings).toContain(
       'Image generation mocked: skipped provider image edit request.'
     );
-    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(requestBodies).toHaveLength(1);
+    expect(requestBodies[0]).toEqual(expect.any(String));
   });
 });
 
@@ -206,16 +226,9 @@ describe('generateSocialPostPack fallbacks and retries', () => {
   it('retries image generation once after a retryable provider error', async () => {
     const fetchImpl = vi
       .fn<typeof fetch>()
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ error: { message: 'busy' } }), { status: 500 })
-      )
-      .mockImplementation(async () =>
-        new Response(
-          JSON.stringify({
-            data: [{ b64_json: generatedImageDataUrl.split(',')[1] }]
-          })
-        )
-      );
+      .mockResolvedValueOnce(promptPlanResponse())
+      .mockResolvedValueOnce(providerErrorResponse(500))
+      .mockImplementation(async () => imageResponse());
 
     const result = await generateSocialPostPack({
       apiKey: 'test-key',
@@ -227,20 +240,15 @@ describe('generateSocialPostPack fallbacks and retries', () => {
     });
 
     expect(result.mode).toBe('generated');
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
 
   it('retries image generation once after an aborted request', async () => {
     const fetchImpl = vi
       .fn<typeof fetch>()
+      .mockResolvedValueOnce(promptPlanResponse())
       .mockRejectedValueOnce(new DOMException('The operation was aborted.', 'AbortError'))
-      .mockImplementation(async () =>
-        new Response(
-          JSON.stringify({
-            data: [{ b64_json: generatedImageDataUrl.split(',')[1] }]
-          })
-        )
-      );
+      .mockImplementation(async () => imageResponse());
 
     const result = await generateSocialPostPack({
       apiKey: 'test-key',
@@ -252,15 +260,14 @@ describe('generateSocialPostPack fallbacks and retries', () => {
     });
 
     expect(result.mode).toBe('generated');
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
 
   it('keeps the generated prompt plan and falls back to demo images when image generation fails', async () => {
     const fetchImpl = vi
       .fn<typeof fetch>()
-      .mockResolvedValue(
-        new Response(JSON.stringify({ error: { message: 'busy' } }), { status: 503 })
-      );
+      .mockResolvedValueOnce(promptPlanResponse())
+      .mockResolvedValue(providerErrorResponse(503));
 
     const result = await generateSocialPostPack({
       apiKey: 'test-key',
@@ -277,6 +284,6 @@ describe('generateSocialPostPack fallbacks and retries', () => {
     expect(result.warnings).toContain(
       'Prompt generated, integrated image generation unavailable. Showing demo placeholders.'
     );
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
 });
